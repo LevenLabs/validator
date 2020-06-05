@@ -205,9 +205,9 @@ func Validate(v interface{}) error {
 // by the field name.
 func (mv *Validator) Validate(v interface{}) error {
 	m := make(ErrorMap)
-	if err := mv.validateStruct(reflect.ValueOf(v), m); err != nil {
-		return err
-	}
+	mv.deepValidateCollection(reflect.ValueOf(v), m, func() string {
+		return ""
+	})
 	if len(m) > 0 {
 		return m
 	}
@@ -288,11 +288,16 @@ func (mv *Validator) deepValidateCollection(f reflect.Value, m ErrorMap, fnameFn
 	case reflect.Struct:
 		subm := make(ErrorMap)
 		err := mv.validateStruct(f, subm)
+		parentName := fnameFn()
 		if err != nil {
-			m[fnameFn()] = ErrorArray{err}
+			m[parentName] = ErrorArray{err}
 		}
 		for j, k := range subm {
-			m[fnameFn()+"."+j] = k
+			keyName := j
+			if parentName != "" {
+				keyName = parentName + "." + keyName
+			}
+			m[keyName] = k
 		}
 	case reflect.Array, reflect.Slice:
 		// we don't need to loop over every byte in a byte slice so we only end up
